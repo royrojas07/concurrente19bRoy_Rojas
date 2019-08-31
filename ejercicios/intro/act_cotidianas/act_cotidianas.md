@@ -1,4 +1,4 @@
-#act_cotidianas
+# act_cotidianas
 1. Cenar: comer, tertuliar, reír. <-- **Cambio de contexto**
 2. Ver una película: observar la pantalla, escuchar los efectos de sonido, comer palomitas de maíz. <-- **Paralelo**
 3. Saciar una sed abundante: tomar agua, respirar, toser. <-- **Cambio de contexto**
