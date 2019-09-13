@@ -5,6 +5,7 @@ La varianza en la duración de hello_ordered_wait se debe a varios factores:
 1. Cantidad de threads que se crean y velocidad asociada.
 2. Limitación en cantidad de CPUs (colas de espera).
 3. Espera activa como mecanismo de sincronización.
+
 Mientras que el main_thread crea muchos threads a gran velocidad, los otros CPUs
 disponibles tienen que repartirse esos hilos que están en cola de espera, al
 haber interrupciones para poder satisfacer la demanda de tantos procesos puede
