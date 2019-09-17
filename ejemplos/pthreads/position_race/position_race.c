@@ -5,6 +5,7 @@
 
 typedef struct {
 	size_t t_count;
+	pthread_mutex_t position_mutex;
 	size_t position;
 } shared_data_t;
 
@@ -24,7 +25,7 @@ int main( int argc, char* argv[] ){
 	shared_data->t_count = sysconf(_SC_NPROCESSORS_ONLN);
 	if( argc >= 2 )
 		shared_data->t_count = strtoull( argv[1], NULL, 10 );
-	
+	pthread_mutex_init( &shared_data->position_mutex, NULL );
 	shared_data->position = 0;
 	
 	struct timespec start_time;
@@ -43,6 +44,7 @@ int main( int argc, char* argv[] ){
 
 	printf("Hello execution time %.9lfs\n", elapsed_seconds);
 	
+	pthread_mutex_destroy( &shared_data->position_mutex );
 	free( shared_data );
 	return 0;
 }
@@ -62,8 +64,10 @@ int create_threads( shared_data_t * shared_data ){
 		pthread_create( &threads[index], NULL, run, &private_data[index] );
 	}
 	
+	pthread_mutex_lock( &shared_data->position_mutex );
 	printf( "HELLO WORLD from main thread\n" );
-
+	pthread_mutex_unlock( &shared_data->position_mutex );
+	
 	for( size_t index = 0; index < shared_data->t_count; ++index )
 		pthread_join( threads[index], NULL );
 	
@@ -75,6 +79,11 @@ int create_threads( shared_data_t * shared_data ){
 void * run( void * data ){
 	private_data_t * private_data = (private_data_t*)data;
 	shared_data_t * shared_data = private_data->shared_data;
-	printf( "Thread %zu/%zu: I arrived at position %zu\n", private_data->thread_num, shared_data->t_count, ++shared_data->position );
+	
+	pthread_mutex_lock( &shared_data->position_mutex );
+	++shared_data->position;
+	printf( "Thread %zu/%zu: I arrived at position %zu\n", private_data->thread_num, shared_data->t_count, shared_data->position );
+	pthread_mutex_unlock( &shared_data->position_mutex );
+	
 	return NULL;
 }
