@@ -9,7 +9,9 @@ LIBS=-pthread
 CLIBS=$(LIBS)
 CXXLIBS=$(LIBS)
 
-$(APPNAME): $(APPNAME).c
+all: $(APPNAME)
+
+%: %.c
 	$(CC) $(CFLAGS) $^ -o $@ $(CLIBS)
 
 .PHONY: ignore
