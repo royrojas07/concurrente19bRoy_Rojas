@@ -11,15 +11,15 @@ int main( int argc, char * argv[] ){
 		trials = strtoull( argv[1], NULL, 10 );
 	}
 	
-	double min_thr_creation = 100;
+	double min_thr_creation = 1;
 	double thr_creation;
-	for( size_t i = 0; i < trials; i++ ){
+	for( size_t i = 0; i < trials; ++i ){
 		thr_creation = thread_creation();
 		if( thr_creation < min_thr_creation )
 			min_thr_creation = thr_creation;
 	}
 	
-	printf( "Minimum thread creation and destruction time was %f among %zu trials\n",
+	printf( "Minimum thread creation and destruction time was %.9lfs among %zu trials\n",
 		min_thr_creation, trials );
 	
 	return 0;
