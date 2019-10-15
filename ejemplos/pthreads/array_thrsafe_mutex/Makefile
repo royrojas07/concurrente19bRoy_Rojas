@@ -3,7 +3,7 @@ CXX=g++
 FLAGS=-g -Wall -Wextra
 CFLAGS=$(FLAGS) -std=c11
 CXXFLAGS=$(FLAGS) -std=c++11
-LIBS=
+LIBS=-pthread
 
 HEADERS=$(wildcard *.h)
 SOURCES=$(wildcard *.c*)
