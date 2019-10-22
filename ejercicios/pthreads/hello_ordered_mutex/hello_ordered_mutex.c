@@ -6,6 +6,7 @@
 typedef struct {
 	size_t t_count;
 	size_t next_thread;
+	pthread_mutex_t * mutexes;
 } shared_data_t;
 
 typedef struct {
@@ -27,6 +28,9 @@ int main( int argc, char* argv[] ){
 	
 	shared_data->next_thread = 0;
 	
+	pthread_mutex_t * mutex_collection = (pthread_mutex_t*) malloc( shared_data->t_count * sizeof(pthread_mutex_t) );
+	shared_data->mutexes = mutex_collection;
+	
 	struct timespec start_time;
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 	
@@ -43,6 +47,9 @@ int main( int argc, char* argv[] ){
 
 	printf("Hello execution time %.9lfs\n", elapsed_seconds);
 	
+	for( size_t index = 0; index < shared_data->t_count; ++index )
+		pthread_mutex_destroy( &mutex_collection[index] );
+	
 	free( shared_data );
 	return 0;
 }
@@ -57,6 +64,9 @@ int create_threads( shared_data_t * shared_data ){
 		return fprintf( stderr, "error: could not allocate private memory for %zu threads\n", shared_data->t_count ), 3;
 	
 	for( size_t index = 0; index < shared_data->t_count; ++index ){
+		pthread_mutex_init( &shared_data->mutexes[index], NULL );
+		if( index != 0 )
+			pthread_mutex_lock( &shared_data->mutexes[index] );
 		private_data[index].thread_num = index;
 		private_data[index].shared_data = shared_data;
 		pthread_create( &threads[index], NULL, run, &private_data[index] );
@@ -75,9 +85,10 @@ int create_threads( shared_data_t * shared_data ){
 void * run( void * data ){
 	private_data_t * private_data = (private_data_t*)data;
 	shared_data_t * shared_data = private_data->shared_data;
-	while( shared_data->next_thread < private_data->thread_num )
-		;
+	pthread_mutex_lock( &shared_data->mutexes[private_data->thread_num] );
 	printf( "HELLO WORLD from secondary thread %zu of %zu\n", private_data->thread_num, shared_data->t_count );
-	++shared_data->next_thread;
+	pthread_mutex_unlock( &shared_data->mutexes[private_data->thread_num] );
+	if( private_data->thread_num != shared_data->t_count-1 )
+		pthread_mutex_unlock( &shared_data->mutexes[private_data->thread_num+1] );
 	return NULL;
 }
