@@ -1,4 +1,4 @@
-# hello_ordered_semaphore
+# Ejercicio 9 [hello_ordered_semaphore]
 Este mecanismo de control de concurrencia sí permite
 resolver este problema de manera predecible.  
 El uso de semáforos, permite controlar en qué momento cada
