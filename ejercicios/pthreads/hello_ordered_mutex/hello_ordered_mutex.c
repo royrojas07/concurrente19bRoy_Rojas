@@ -5,7 +5,6 @@
 
 typedef struct {
 	size_t t_count;
-	size_t next_thread;
 	pthread_mutex_t * mutexes;
 } shared_data_t;
 
@@ -26,8 +25,6 @@ int main( int argc, char* argv[] ){
 	if( argc >= 2 )
 		shared_data->t_count = strtoull( argv[1], NULL, 10 );
 	
-	shared_data->next_thread = 0;
-	
 	pthread_mutex_t * mutex_collection = (pthread_mutex_t*) malloc( shared_data->t_count * sizeof(pthread_mutex_t) );
 	shared_data->mutexes = mutex_collection;
 	
@@ -39,6 +36,8 @@ int main( int argc, char* argv[] ){
 		return error;
 	}
 	
+	printf( "HELLO WORLD from main thread\n" );
+	
 	struct timespec finish_time;
 	clock_gettime(CLOCK_MONOTONIC, &finish_time);
 
@@ -47,9 +46,7 @@ int main( int argc, char* argv[] ){
 
 	printf("Hello execution time %.9lfs\n", elapsed_seconds);
 	
-	for( size_t index = 0; index < shared_data->t_count; ++index )
-		pthread_mutex_destroy( &mutex_collection[index] );
-	
+	free( mutex_collection );
 	free( shared_data );
 	return 0;
 }
@@ -71,11 +68,12 @@ int create_threads( shared_data_t * shared_data ){
 		private_data[index].shared_data = shared_data;
 		pthread_create( &threads[index], NULL, run, &private_data[index] );
 	}
-	
-	printf( "HELLO WORLD from main thread\n" );
 
 	for( size_t index = 0; index < shared_data->t_count; ++index )
 		pthread_join( threads[index], NULL );
+	
+	for( size_t index = 0; index < shared_data->t_count; ++index )
+		pthread_mutex_destroy( &shared_data->mutexes[index] );
 	
 	free( private_data );
 	free( threads );
