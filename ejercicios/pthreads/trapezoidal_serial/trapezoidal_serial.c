@@ -46,7 +46,7 @@ double trapezoidal_area( double func(), double a, double b, int n ){
 		bases_sum += func( a + ((double)(k-1))*subinterval_length )
 			+ func( a + ((double)k)*subinterval_length );
 	}
-
+	
 	area = 0.5 * subinterval_length * bases_sum;
 	return area;
 }

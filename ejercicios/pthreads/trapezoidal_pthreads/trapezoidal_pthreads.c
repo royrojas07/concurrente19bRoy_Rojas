@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-//#include <time.h>
 #include <pthread.h>
 
 typedef struct {
@@ -10,7 +9,7 @@ typedef struct {
 	double r_lim;
 	int trapezoids;
 	double subinterval_length;
-	double func();
+	double area_down_curve;
 } shared_data_t;
 
 typedef struct {
@@ -19,13 +18,15 @@ typedef struct {
 	shared_data_t * shared_data;
 } private_data_t;
 
+int create_threads( shared_data_t * shared_data );
 void * trapezoidal_area( void * data );
 double parabola_function( double x );
+void calculate_area( shared_data_t * shared_data, private_data_t * private_data );
 
 int main( int argc, char * argv[] ){
 	shared_data_t * shared_data = (shared_data_t *) calloc( 1, sizeof(shared_data_t) );
 
-	if( argc < 4 )
+	if( argc < 5 )
 		return fprintf( stderr, "Argumentos inválidos. Los "
 			"argumentos son:\n./programa lim_a lim_b cant_trapezoides cant_threads\n" ), 1;
 
@@ -52,7 +53,7 @@ int main( int argc, char * argv[] ){
 	struct timespec finish_time;
 	clock_gettime(CLOCK_MONOTONIC, &finish_time);
 
-	printf( "El área bajo la curva es: %lf\n", /*area_down_curve*/ );
+	printf( "El área bajo la curva es: %lf\n", shared_data->area_down_curve );
 
 	double elapsed_seconds = finish_time.tv_sec - start_time.tv_sec
 		+ 1e-9 * (finish_time.tv_nsec - start_time.tv_nsec);
@@ -66,13 +67,14 @@ int main( int argc, char * argv[] ){
 void * trapezoidal_area( void * data ){
 	private_data_t * private_data = ( private_data_t * )data;
 	shared_data_t * shared_data = private_data->shared_data;
-
-	for( int k = private_data->thread_num; k <= shared_data->trapezoids; k += shared_data->thread_count ){
-		private_data->bases_sum += shared_data->func( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
-			+ shared_data->func( shared_data->l_lim + ((double)k)*shared_data->subinterval_length );
+	
+	private_data->bases_sum = 0;
+	
+	for( int k = private_data->thread_num+1; k <= shared_data->trapezoids; k += shared_data->thread_count ){
+		private_data->bases_sum += parabola_function( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
+			+ parabola_function( shared_data->l_lim + ((double)k)*shared_data->subinterval_length );
 	}
-
-	//area = 0.5 * subinterval_length * bases_sum;
+	printf("inside trapezoidal area %lf\n", private_data->bases_sum);
 	return NULL;
 }
 
@@ -86,12 +88,14 @@ int create_threads( shared_data_t * shared_data ){
 		return fprintf( stderr, "No se pudo reservar memoria priavda para %d threads\n", shared_data->thread_count ), 2;
 
 	shared_data->subinterval_length = ( shared_data->r_lim - shared_data->l_lim )/(double)shared_data->trapezoids;
-
+	
 	for( int i = 0; i < shared_data->thread_count; ++i ){
 		private_data[i].thread_num = i;
 		private_data[i].shared_data = shared_data;
 		pthread_create( &threads[i], NULL, trapezoidal_area, &private_data[i] );
 	}
+	printf("%lf\n", private_data[0].bases_sum);
+	calculate_area( shared_data, private_data );
 	
 	for( int i = 0; i < shared_data->thread_count; ++i )
 		pthread_join( threads[i], NULL );
@@ -99,6 +103,13 @@ int create_threads( shared_data_t * shared_data ){
 	free( private_data );
 	free( threads );
 	return 0;
+}
+
+void calculate_area( shared_data_t * shared_data, private_data_t * private_data ){
+	double bases_sum = 0;
+	for( int i = 0; i < shared_data->thread_count; ++i )
+		bases_sum += private_data[i].bases_sum;
+	shared_data->area_down_curve = 0.5 * shared_data->subinterval_length * bases_sum;
 }
 
 double parabola_function( double x ){
