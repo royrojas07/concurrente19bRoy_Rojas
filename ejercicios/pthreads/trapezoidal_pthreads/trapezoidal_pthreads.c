@@ -10,6 +10,7 @@ typedef struct {
 	int trapezoids;
 	double subinterval_length;
 	double area_down_curve;
+	pthread_mutex_t mutex;
 } shared_data_t;
 
 typedef struct {
@@ -42,14 +43,18 @@ int main( int argc, char * argv[] ){
 
 	if( !shared_data->thread_count )
 		shared_data->thread_count = sysconf( _SC_NPROCESSORS_ONLN );
-
+	
+	pthread_mutex_init( &shared_data->mutex, NULL );
+	
 	struct timespec start_time;
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 
 	int error = create_threads( shared_data );
 	if( error )
 		return free( shared_data ), error;
-
+	
+	shared_data->area_down_curve *= 0.5 * shared_data->subinterval_length;
+	
 	struct timespec finish_time;
 	clock_gettime(CLOCK_MONOTONIC, &finish_time);
 
@@ -59,7 +64,8 @@ int main( int argc, char * argv[] ){
 		+ 1e-9 * (finish_time.tv_nsec - start_time.tv_nsec);
 
 	printf( "Execution time %.9lfs\n", elapsed_seconds );
-
+	
+	pthread_mutex_destroy( &shared_data->mutex );
 	free( shared_data );
 	return 0;
 }
@@ -74,7 +80,11 @@ void * trapezoidal_area( void * data ){
 		private_data->bases_sum += parabola_function( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
 			+ parabola_function( shared_data->l_lim + ((double)k)*shared_data->subinterval_length );
 	}
-	printf("inside trapezoidal area %lf\n", private_data->bases_sum);
+	
+	pthread_mutex_lock( &shared_data->mutex );
+	shared_data->area_down_curve += private_data->bases_sum;
+	pthread_mutex_unlock( &shared_data->mutex );
+	
 	return NULL;
 }
 
@@ -94,8 +104,6 @@ int create_threads( shared_data_t * shared_data ){
 		private_data[i].shared_data = shared_data;
 		pthread_create( &threads[i], NULL, trapezoidal_area, &private_data[i] );
 	}
-	printf("%lf\n", private_data[0].bases_sum);
-	calculate_area( shared_data, private_data );
 	
 	for( int i = 0; i < shared_data->thread_count; ++i )
 		pthread_join( threads[i], NULL );
@@ -105,12 +113,14 @@ int create_threads( shared_data_t * shared_data ){
 	return 0;
 }
 
-void calculate_area( shared_data_t * shared_data, private_data_t * private_data ){
+/*void calculate_area( shared_data_t * shared_data, private_data_t * private_data ){
 	double bases_sum = 0;
 	for( int i = 0; i < shared_data->thread_count; ++i )
 		bases_sum += private_data[i].bases_sum;
 	shared_data->area_down_curve = 0.5 * shared_data->subinterval_length * bases_sum;
-}
+	printf("inside calculate area %lf\n", private_data->bases_sum);
+	printf("inside calculate area %lf\n", private_data[0].bases_sum);
+}*/
 
 double parabola_function( double x ){
 	double y = x*x + 0*x + 0;
