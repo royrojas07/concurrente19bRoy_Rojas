@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <unistd.h>
+//#include <time.h>
 #include <pthread.h>
 
 typedef struct {
@@ -9,6 +10,7 @@ typedef struct {
 	double r_lim;
 	int trapezoids;
 	double subinterval_length;
+	double func();
 } shared_data_t;
 
 typedef struct {
@@ -17,7 +19,7 @@ typedef struct {
 	shared_data_t * shared_data;
 } private_data_t;
 
-double trapezoidal_area( double func(), double a, double b, int n );
+void * trapezoidal_area( void * data );
 double parabola_function( double x );
 
 int main( int argc, char * argv[] ){
@@ -40,19 +42,17 @@ int main( int argc, char * argv[] ){
 	if( !shared_data->thread_count )
 		shared_data->thread_count = sysconf( _SC_NPROCESSORS_ONLN );
 
-	int error = create_threads( shared_data );
-	if( error )
-		return error;
-
 	struct timespec start_time;
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-	double area_down_curve = trapezoidal_area( parabola_function, l_lim, r_lim, trapezoids );
+	int error = create_threads( shared_data );
+	if( error )
+		return free( shared_data ), error;
 
 	struct timespec finish_time;
 	clock_gettime(CLOCK_MONOTONIC, &finish_time);
 
-	printf( "El área bajo la curva es: %lf\n", area_down_curve );
+	printf( "El área bajo la curva es: %lf\n", /*area_down_curve*/ );
 
 	double elapsed_seconds = finish_time.tv_sec - start_time.tv_sec
 		+ 1e-9 * (finish_time.tv_nsec - start_time.tv_nsec);
@@ -63,19 +63,17 @@ int main( int argc, char * argv[] ){
 	return 0;
 }
 
-void trapezoidal_area( void * data ){
+void * trapezoidal_area( void * data ){
 	private_data_t * private_data = ( private_data_t * )data;
-	
-	//double area;
-	//double subinterval_length = ( b - a )/(double)n;
-	//double bases_sum = 0;
+	shared_data_t * shared_data = private_data->shared_data;
 
-	for( int k = private_data->thread_num; k <= private_data->shared_data->thread_count; k += private_data->shared_data->thread_count ){
-		private_data->bases_sum += func( a + ((double)(k-1))*subinterval_length )
-			+ func( a + ((double)k)*subinterval_length );
+	for( int k = private_data->thread_num; k <= shared_data->trapezoids; k += shared_data->thread_count ){
+		private_data->bases_sum += shared_data->func( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
+			+ shared_data->func( shared_data->l_lim + ((double)k)*shared_data->subinterval_length );
 	}
 
 	//area = 0.5 * subinterval_length * bases_sum;
+	return NULL;
 }
 
 int create_threads( shared_data_t * shared_data ){
@@ -87,13 +85,16 @@ int create_threads( shared_data_t * shared_data ){
 	if( !private_data )
 		return fprintf( stderr, "No se pudo reservar memoria priavda para %d threads\n", shared_data->thread_count ), 2;
 
-	shared_data->subinterval_length = ( r_lim - l_lim )/(double)shared_data->trapezoids;
+	shared_data->subinterval_length = ( shared_data->r_lim - shared_data->l_lim )/(double)shared_data->trapezoids;
 
 	for( int i = 0; i < shared_data->thread_count; ++i ){
 		private_data[i].thread_num = i;
 		private_data[i].shared_data = shared_data;
-		create_threads( &threads[i], NULL, trapezoidal_area, &private_data[i] );
+		pthread_create( &threads[i], NULL, trapezoidal_area, &private_data[i] );
 	}
+	
+	for( int i = 0; i < shared_data->thread_count; ++i )
+		pthread_join( threads[i], NULL );
 
 	free( private_data );
 	free( threads );
