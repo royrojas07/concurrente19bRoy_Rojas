@@ -22,27 +22,25 @@ typedef struct {
 int create_threads( shared_data_t * shared_data );
 void * trapezoidal_area( void * data );
 double parabola_function( double x );
-void calculate_area( shared_data_t * shared_data, private_data_t * private_data );
 
 int main( int argc, char * argv[] ){
 	shared_data_t * shared_data = (shared_data_t *) calloc( 1, sizeof(shared_data_t) );
 
-	if( argc < 5 )
+	if( argc < 4 )
 		return fprintf( stderr, "Argumentos inválidos. Los "
 			"argumentos son:\n./programa lim_a lim_b cant_trapezoides cant_threads\n" ), 1;
 
 	shared_data->l_lim = strtod( argv[1], NULL );
 	shared_data->r_lim = strtod( argv[2], NULL );
 	shared_data->trapezoids = atoi( argv[3] );
-	shared_data->thread_count = atoi( argv[4] );
+	shared_data->thread_count = sysconf( _SC_NPROCESSORS_ONLN );
+	if( argc == 5 )
+		shared_data->thread_count = atoi( argv[4] );
 
 	if( shared_data->l_lim >= shared_data->r_lim )
 		return fprintf( stderr, "Los valores límites del rango son inválidos\n" ), 2;
-	else if( shared_data->trapezoids <= 0 || shared_data->thread_count < 0 )
+	else if( shared_data->trapezoids <= 0 || shared_data->thread_count <= 0 )
 		return fprintf( stderr, "La cantidad de trapeziodes o threads es inválida\n" ), 3;
-
-	if( !shared_data->thread_count )
-		shared_data->thread_count = sysconf( _SC_NPROCESSORS_ONLN );
 	
 	pthread_mutex_init( &shared_data->mutex, NULL );
 	
