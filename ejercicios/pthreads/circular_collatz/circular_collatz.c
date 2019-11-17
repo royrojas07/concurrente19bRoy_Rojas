@@ -2,8 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pthread_barrier.h"
-
 static size_t worker_count = 3;
 static size_t number_count = 3;
 static size_t* numbers = NULL;
@@ -15,10 +13,11 @@ static pthread_barrier_t barrier;
 void* calculate(void* data)
 {
 	const size_t my_id = (size_t)data;
-	const size_t next;
-	const size_t prev;
+	size_t next;
+	size_t prev;
 
 	while( current_step < max_steps ){
+		pthread_barrier_wait(&barrier);
 		for ( size_t i = my_id; i < number_count; i += worker_count )
 		{
 			if( numbers[i] > 1 ){
@@ -60,9 +59,9 @@ int main()
 	pthread_barrier_destroy(&barrier);
 
 	if ( current_step > max_steps )
-		printf("No converge in %zu steps", max_steps);
+		printf("No converge in %zu steps\n", max_steps);
 	else
-		printf("Converged in %zu steps", current_step);
+		printf("Converged in %zu steps\n", current_step);
 
 	return 0;
 }
