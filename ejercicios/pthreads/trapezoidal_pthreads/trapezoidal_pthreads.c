@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 typedef struct {
 	int thread_count;
@@ -10,12 +11,13 @@ typedef struct {
 	int trapezoids;
 	double subinterval_length;
 	double area_down_curve;
-	pthread_mutex_t mutex;
+	//pthread_mutex_t mutex;
+	sem_t * semaphores;
 } shared_data_t;
 
 typedef struct {
 	int thread_num;
-	double bases_sum;
+	int entry_cnt;
 	shared_data_t * shared_data;
 } private_data_t;
 
@@ -42,7 +44,7 @@ int main( int argc, char * argv[] ){
 	else if( shared_data->trapezoids <= 0 || shared_data->thread_count <= 0 )
 		return fprintf( stderr, "La cantidad de trapeziodes o threads es inválida\n" ), 3;
 	
-	pthread_mutex_init( &shared_data->mutex, NULL );
+	//pthread_mutex_init( &shared_data->mutex, NULL );
 	
 	struct timespec start_time;
 	clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -63,7 +65,7 @@ int main( int argc, char * argv[] ){
 
 	printf( "Execution time %.9lfs\n", elapsed_seconds );
 	
-	pthread_mutex_destroy( &shared_data->mutex );
+	//pthread_mutex_destroy( &shared_data->mutex );
 	free( shared_data );
 	return 0;
 }
@@ -72,16 +74,22 @@ void * trapezoidal_area( void * data ){
 	private_data_t * private_data = ( private_data_t * )data;
 	shared_data_t * shared_data = private_data->shared_data;
 	
-	private_data->bases_sum = 0;
-	
+	double bases_sum = 0;
+	private_data->entry_cnt = 0;
 	for( int k = private_data->thread_num+1; k <= shared_data->trapezoids; k += shared_data->thread_count ){
-		private_data->bases_sum += parabola_function( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
+		bases_sum = parabola_function( shared_data->l_lim + ((double)(k-1))*shared_data->subinterval_length )
 			+ parabola_function( shared_data->l_lim + ((double)k)*shared_data->subinterval_length );
+		sem_wait( &shared_data->semaphores[private_data->thread_num] );
+		shared_data->area_down_curve += bases_sum;
+		if( private_data->thread_num != shared_data->thread_count-1 )
+			sem_post( &shared_data->semaphores[private_data->thread_num+1] );
+		else
+			sem_post( &shared_data->semaphores[0] );
 	}
 	
-	pthread_mutex_lock( &shared_data->mutex );
-	shared_data->area_down_curve += private_data->bases_sum;
-	pthread_mutex_unlock( &shared_data->mutex );
+	/*pthread_mutex_lock( &shared_data->mutex );
+	shared_data->area_down_curve += bases_sum;
+	pthread_mutex_unlock( &shared_data->mutex );*/
 	
 	return NULL;
 }
@@ -94,7 +102,15 @@ int create_threads( shared_data_t * shared_data ){
 	private_data_t * private_data = (private_data_t *) malloc( shared_data->thread_count * sizeof( private_data_t ) );
 	if( !private_data )
 		return fprintf( stderr, "No se pudo reservar memoria priavda para %d threads\n", shared_data->thread_count ), 2;
-
+	
+	/* * */
+	sem_t * sems = (sem_t *) malloc( shared_data->thread_count * sizeof( sem_t ) );
+	shared_data->semaphores = sems;
+	sem_init( &shared_data->semaphores[0], 0, 1 );
+	for( int i = 1; i < shared_data->thread_count; ++i )
+		sem_init( &shared_data->semaphores[i], 0, 0 );
+	/* * */
+	
 	shared_data->subinterval_length = ( shared_data->r_lim - shared_data->l_lim )/(double)shared_data->trapezoids;
 	
 	for( int i = 0; i < shared_data->thread_count; ++i ){
@@ -105,7 +121,8 @@ int create_threads( shared_data_t * shared_data ){
 	
 	for( int i = 0; i < shared_data->thread_count; ++i )
 		pthread_join( threads[i], NULL );
-
+	
+	free( sems );
 	free( private_data );
 	free( threads );
 	return 0;
