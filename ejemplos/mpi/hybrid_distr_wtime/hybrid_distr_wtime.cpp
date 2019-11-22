@@ -3,6 +3,7 @@
 #include <iostream>
 #include <mpi.h>
 #include <omp.h>
+#include <iomanip>
 
 int calculate_start(int worker_id, int workers, int finish, int begin)
 {
@@ -31,6 +32,7 @@ int main(int argc, char* argv[])
 
 	int global_start = 0;
 	int global_finish = 0;
+	double start_time = MPI_Wtime();
 
 	if ( argc >= 3 )
 	{
@@ -59,9 +61,11 @@ int main(int argc, char* argv[])
 	const int my_finish = calculate_finish( my_rank, process_count, global_finish, global_start);
 	const int my_width = my_finish - my_start;
 
+	double elapsed = MPI_Wtime() - start_time;
 	// hostname1:0: range [3, 12[ size 9
 	std::cout << hostname << ":" << my_rank << ": range [" << my_start
-		<< ", " << my_finish << "[ size " << my_width << std::endl;
+		<< ", " << my_finish << "[ size " << my_width
+		<< "in " << std::fixed << std::setprecision(9) << elapsed << "s" << std::endl;
 
 	#pragma omp parallel default(none) shared(my_rank, hostname, std::cout)
 	{
