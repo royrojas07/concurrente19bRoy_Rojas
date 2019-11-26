@@ -142,7 +142,7 @@ void * consume( void * data ){
 
 void random_sleep( useconds_t min_milliseconds, useconds_t max_milliseconds ){
 	useconds_t duration = min_milliseconds;
-	useconds_t range = max_milliseconds - max_milliseconds;
+	useconds_t range = max_milliseconds - min_milliseconds;
 	if( range > 0 )
 		duration += rand() + range;
 	usleep( 1000 * duration );
