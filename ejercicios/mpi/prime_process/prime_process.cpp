@@ -73,22 +73,25 @@ int main(int argc, char* argv[])
 	const int my_start = calculate_start( my_rank, process_count, global_finish, global_start);
 	const int my_finish = calculate_finish( my_rank, process_count, global_finish, global_start);
 	int prime_count = 0;
-	int thread_count = 0;
 
-	#pragma omp parallel default(none) shared( thread_count ) reduction( +:prime_count )
-	{
-		thread_count = omp_get_num_threads();
-		#pragma omp for schedule( guided )
-		for( int i = my_start; i < my_finish; ++i )
-			if ( is_prime( i ) )
-				++prime_count;
+	for( int i = my_start; i < my_finish; ++i  )
+		if( is_prime( i ) )
+			++prime_count;
+
+	if( my_rank == 0 ){
+		int process_prime_count = 0;
+		for( int sender = 1; sender < process_count; ++sender ){
+			MPI_Recv( &process_prime_count, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+			prime_count += process_prime_count;
+		}
+		double elapsed = MPI_Wtime() - start_time;
+
+		std::cout << prime_count << " primes found in range [" << global_start
+			<< "," << global_finish << "[ in " << elapsed << "s with "
+			<< process_count << " processes" << std::endl;
+	} else {
+		MPI_Send( &prime_count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD );
 	}
-
-	double elapsed = MPI_Wtime() - start_time;
-	std::cout << "Process " <<  my_rank << " on " << hostname << " found "
-		<< prime_count << " primes in range [" << my_start
-		<< "," << my_finish << "[ in " << elapsed << "s with "
-		<< thread_count << " threads" << std::endl;
 
 	MPI_Finalize();
 }

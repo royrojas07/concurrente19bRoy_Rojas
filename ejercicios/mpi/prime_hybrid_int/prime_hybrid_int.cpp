@@ -75,35 +75,31 @@ int main(int argc, char* argv[])
 	int prime_count = 0;
 	int thread_count = 0;
 
-	#pragma omp parallel default(none)
+	#pragma omp parallel default(none) shared( thread_count ) reduction( +:prime_count )
 	{
 		thread_count = omp_get_num_threads();
-		#pragma omp for schedule( guided ) reduction( +:prime_count )
+		#pragma omp for schedule( guided )
 		for( int i = my_start; i < my_finish; ++i )
 			if ( is_prime( i ) )
 				++prime_count;
 	}
-	double elapsed = MPI_Wtime() - start_time;
 
 	if( my_rank == 0 ){
 		int process_prime_cnt = 0;
-		double process_elapsed = 0;
 		int process_thread_cnt = 0;
-		for( int sender = 0; sender < process_count; ++sender ){
-			MPI_Recv( &process_prime_cnt, 1, MPI_INT, /*source*/ 0, /*tag*/ 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+		for( int sender = 1; sender < process_count; ++sender ){
+			MPI_Recv( &process_prime_cnt, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 			prime_count += process_prime_cnt;
-			MPI_Recv( &process_elapsed, 1, MPI_DOUBLE, /*source*/ 0, /*tag*/ 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
-			elapsed += process_elapsed;
-			MPI_Recv( &process_thread_cnt, 1, MPI_INT, /*source*/ 0, /*tag*/ 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+			MPI_Recv( &process_thread_cnt, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 			thread_count += process_thread_cnt;
 		}
+		double elapsed = MPI_Wtime() - start_time;
 
 		std::cout << prime_count << " primes found in range [" << global_start
 			<< "," << global_finish << "[ in " << elapsed << "s with "
-			<< process_count << " processes and " << thread_count << " threads";
+			<< process_count << " processes and " << thread_count << " threads" << std::endl;
 	} else {
 		MPI_Send( &prime_count, 1, MPI_INT, /*dest*/ 0, /*tag*/ 0, MPI_COMM_WORLD );
-		MPI_Send( &elapsed, 1, MPI_DOUBLE, /*dest*/ 0, /*tag*/ 0, MPI_COMM_WORLD );
 		MPI_Send( &thread_count, 1, MPI_INT, /*dest*/ 0, /*tag*/ 0, MPI_COMM_WORLD );
 	}
 
