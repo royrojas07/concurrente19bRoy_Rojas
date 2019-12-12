@@ -1,11 +1,15 @@
-# prime_process
+# Ejercicio 24 [prime_process_reduction]
+La máxima cantidad de procesos que el clúster permite es 1016. 
 ## prime_hybrid_int
-### best output
-970704 primes found in range [2,15000000[ in 1.53734s with 2 processes and 16 threads  
+### Best output
+970704 primes found in range [2,15000000[ in 0.638148s with 127 processes and 1016 threads  
 ## prime_process
-### best output
-970704 primes found in range [2,15000000[ in 1.09954s with 16 processes  
+### Best output
+970704 primes found in range [2,15000000[ in 1.98963s with 1016 processes
+## prime_process_reduction
+### Best output
+970704 primes found in range [2,15000000[ in 1.07799s with 1016 processes
   
-La menor duración la produjo la solución *prime_process*, el hecho que esta solución
-únicamente emplee recursos en comunicación punto a punto y no en creación y destrucción
-de threads hace que sea más eficiente.
+La menor duración la produjo la solución *prime_hybrid_int*, esto debido a que la cantidad
+de procesos que tienen que comunicarse es menor y la velocidad de comunicación entre
+los hilos de cada proceso es mucho mayor.

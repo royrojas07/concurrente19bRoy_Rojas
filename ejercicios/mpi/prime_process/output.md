@@ -1,9 +1,9 @@
-# prime_process
+# Ejercicio 23 [prime_process]
 ## prime_hybrid_int
-### best output
+### Best output
 970704 primes found in range [2,15000000[ in 1.53734s with 2 processes and 16 threads  
 ## prime_process
-### best output
+### Best output
 970704 primes found in range [2,15000000[ in 1.09954s with 16 processes  
   
 La menor duración la produjo la solución *prime_process*, el hecho que esta solución

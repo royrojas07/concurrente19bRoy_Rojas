@@ -88,9 +88,9 @@ int main(int argc, char* argv[])
 		int process_prime_cnt = 0;
 		int process_thread_cnt = 0;
 		for( int sender = 1; sender < process_count; ++sender ){
-			MPI_Recv( &process_prime_cnt, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+			MPI_Recv( &process_prime_cnt, 1, MPI_INT, sender, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 			prime_count += process_prime_cnt;
-			MPI_Recv( &process_thread_cnt, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
+			MPI_Recv( &process_thread_cnt, 1, MPI_INT, sender, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 			thread_count += process_thread_cnt;
 		}
 		double elapsed = MPI_Wtime() - start_time;
