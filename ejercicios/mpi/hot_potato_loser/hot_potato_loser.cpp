@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 		std::cout << "usage: ./hot_potato_loser potato_value" << std::endl;
 
 	int iteration = 0;
-	while( potato > 0 ){
+	while( potato > 0 && process_count != 1 ){
 		if( my_rank != 0 )
 			MPI_Recv( &potato, 1, MPI_INT, my_rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 		else if( iteration != 0 )
