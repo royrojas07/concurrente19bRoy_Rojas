@@ -73,6 +73,8 @@ int main( int argc, char * argv[] ){
 					j = data->cols;
 				} else if( j == data->cols-1 ){
 					prev_areas.push_back( data->cloud_areas[i] );
+					if( i+1 != prev_areas.size() )
+						update_last_row( i+1, prev_areas.size(), data );
 				}
 			}
 		}
