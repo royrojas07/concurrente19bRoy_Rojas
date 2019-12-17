@@ -131,7 +131,7 @@ void expand_cloud( int r, int c, data_t * data ){
 }
 
 bool exists( int r, int c, data_t * data ){
-	return r >= data->init_row && r < data->fin_row && c >= 0 && c <= data->cols;
+	return r >= data->init_row && r < data->fin_row && c >= 0 && c < data->cols;
 }
 
 void print_clouds( std::vector<int> cloud_areas ){
