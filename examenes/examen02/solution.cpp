@@ -24,6 +24,8 @@ double ** read_image( FILE * file );
 int ** get_mirror( int begin, int end );
 int my_start( int rank, int D, int W );
 void update_last_row( int to_mod, int mod, data_t * data );
+void destroy_image( double ** image, int size );
+void destroy_mirror( int ** mirror, int size );
 
 int main( int argc, char * argv[] ){
 	MPI_Init( &argc, &argv );
@@ -52,6 +54,7 @@ int main( int argc, char * argv[] ){
 	int prev_areas_count = 0;
 	std::vector<int> prev_areas;
 	int * prev_last_row = malloc( data->cols * sizeof( int ) );
+	int range = data->fin_row - data->init_row;
 
 	if( rank != 0 ){
 		MPI_Recv( &prev_areas_count, 1, MPI::INT, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
@@ -59,7 +62,6 @@ int main( int argc, char * argv[] ){
 		MPI_Recv( &prev_areas[0], prev_areas_count, MPI::INT, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 		MPI_Recv( &prev_last_row, data->cols, MPI::INT, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE );
 
-		int range = data->fin_row - data->init_row;
 		for( int i = 0; i < data->cloud_areas.size(); ++i ){
 			for( int j = 0; j < data->cols; ++j ){
 				if( data->mirror[range-1][j] == i+1 && prev_last_row[j] != -1 ){
@@ -87,6 +89,9 @@ int main( int argc, char * argv[] ){
 		MPI_Send( &data->cloud_areas[0], areas_count, MPI::INT, next, 0, MPI_COMM_WORLD );
 		MPI_Send( &data->mirror[range-1][0], data->cols, MPI::INT, next, 0, MPI_COMM_WORLD );
 	}
+
+	destroy_mirror( data->mirror, range );
+	destroy_image( data->image, data->cols );
 
 	return 0;
 }
@@ -158,4 +163,16 @@ void update_last_row( int to_mod, int mod, data_t * data ){
 	for( int i = 0; i < data->cols; ++i )
 		if( data->mirror[range-1][i] == to_mod )
 			data->mirror[range-1][i] = mod;
+}
+
+void destroy_image( double ** image, int size ){
+	for( int i = 0; i < size; ++i )
+		free( image[i] );
+	free( image );
+}
+
+void destroy_mirror( int ** mirror, int size ){
+	for( int i = 0; i < size; ++i )
+		free( mirror[i] );
+	free( mirror );
 }
