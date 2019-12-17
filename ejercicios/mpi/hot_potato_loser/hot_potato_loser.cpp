@@ -15,10 +15,6 @@ int main(int argc, char* argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &process_count);
 
-	char hostname[MPI_MAX_PROCESSOR_NAME];
-	int hostname_length = -1;
-	MPI_Get_processor_name(hostname, &hostname_length);
-
 	int potato = 0;
 
 	if( argc == 2 )
